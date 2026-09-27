@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="An unofficial, community-built view of referee-published close-1 standings with a public verified JSON API.">
+  <meta property="og:title" content="close-1 leaderboard · unofficial community view">
+  <meta property="og:description" content="Referee-signed Top 25, price history, data health and an open JSON API.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="close-1 leaderboard · unofficial community view">
+  <meta name="twitter:description" content="Referee-signed Top 25, price history, data health and an open JSON API.">
+  <meta name="twitter:image" content="/og.png">
+  <meta name="theme-color" content="#f4f4ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111512" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23245c45'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='%23fffef8' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <title>close-1 leaderboard · unofficial community view</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#leaderboard">Skip to leaderboard</a>
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">UNOFFICIAL · COMMUNITY-BUILT · READ-ONLY</p>
+      <h1>close-1 leaderboard</h1>
+      <p class="lede">A verification-first view of the Top 25 published by the referee. Not affiliated with or operated by FLOP Labs.</p>
+    </div>
+    <nav aria-label="Primary">
+      <a href="https://github.com/flop-labs/technocore-close-call-challenge" rel="noreferrer">Rules repository ↗</a>
+      <a href="https://technocore.chat/r/d-close1-pnl" rel="noreferrer">Referee rooms ↗</a>
+      <a href="/api">Open API ↗</a>
+    </nav>
+  </header>
+
+  <main>
+    <div id="status" class="banner loading" role="status" aria-live="polite">Loading verified referee data…</div>
+    <section id="kpis" class="kpis" aria-label="Contest summary"></section>
+
+    <section id="leaderboard" class="panel">
+      <div class="section-head">
+        <div><p class="eyebrow">REFEREE-PUBLISHED</p><h2>Top 25</h2></div>
+        <a class="button" href="/api/board.csv">Download CSV</a>
+      </div>
+      <p class="explain">Scores are marked at the contest's own VWAP, not at Hyperliquid. The final score is settled at the last Hyperliquid trade before S.</p>
+      <div id="tableMount"></div>
+      <p class="footnote"><span id="tieNote"></span> *Est. at HL = score + position × (HL − mark). The referee publishes positions only for its top 10 by size, so most rows cannot be estimated and show “—”.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-head"><div><p class="eyebrow">RETAINED REFEREE POSTS · ~16 HOURS</p><h2>Price vs contest mark</h2></div><span id="chartMeta" class="muted"></span></div>
+      <div id="chart" class="chart"></div>
+      <details class="table-view"><summary>Show the data as a table</summary><div id="chartTable"></div></details>
+    </section>
+
+    <div class="two-col">
+      <section class="panel">
+        <p class="eyebrow">PUBLIC DID</p><h2>Key lookup</h2>
+        <form id="lookupForm"><label for="did">Search published Top 25 / positions Top 10 appearances</label><div class="input-row"><input id="did" name="did" required pattern="did:key:z6Mk[1-9A-HJ-NP-Za-km-z]{44}" placeholder="did:key:z6Mk…"><button type="submit">Look up</button></div></form>
+        <div id="lookupResult" aria-live="polite"></div>
+      </section>
+      <section class="panel">
+        <p class="eyebrow">REFEREE FEED</p><h2>Data health</h2>
+        <dl id="health" class="facts"></dl>
+        <h3>This page cannot show</h3>
+        <ul id="caveats" class="caveats"></ul>
+      </section>
+    </div>
+
+    <section class="panel">
+      <p class="eyebrow">ED25519</p><h2>Verification</h2>
+      <p>Every displayed room snapshot is accepted only when <code>from</code> matches the referee DID and the signature verifies over <code>room|nonce|text</code>. Nonces remain decimal strings.</p>
+      <div id="verification" class="verification"></div>
+      <h3>Verify it yourself</h3>
+      <pre><code>const data = Buffer.from(`${room}|${nonce}|${text}`, "utf8");
+const der = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), publicKey]);
+const key = crypto.createPublicKey({ key: der, format: "der", type: "spki" });
+const signature = Buffer.from(sig, "base64url");
+console.log(crypto.verify(null, data, key, signature));</code></pre>
+    </section>
+  </main>
+  <footer>Public data from <a href="https://technocore.chat">technocore.chat</a> · community software · no official logo or endorsement</footer>
+</body>
+</html>

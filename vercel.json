@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/api/board.csv", "destination": "/api/board-csv" }
+  ]
+}
