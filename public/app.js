@@ -8,7 +8,7 @@ const el = (tag, text, className) => {
   if (className) n.className = className;
   return n;
 };
-const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const calm = () => document.documentElement.classList.contains("calm");
 const LOCALE = "en-US";
 const fmt = (v, d = 2) => (v === null || v === undefined || !Number.isFinite(v)) ? "—" : new Intl.NumberFormat(LOCALE, { maximumFractionDigits: d, minimumFractionDigits: d }).format(v);
 const int = (v) => (Number.isFinite(v) ? new Intl.NumberFormat(LOCALE).format(Math.round(v)) : "—");
@@ -29,7 +29,7 @@ let lastLeader = null;
 function animateTo(node, value, format, duration = 900) {
   const from = Number(node.dataset.value ?? NaN);
   node.dataset.value = value;
-  if (REDUCED || !Number.isFinite(from) || from === value) { node.textContent = format(value); return; }
+  if (calm() || !Number.isFinite(from) || from === value) { node.textContent = format(value); return; }
   const start = performance.now();
   const step = (now) => {
     const t = Math.min(1, (now - start) / duration), e = 1 - (1 - t) ** 3;
@@ -60,7 +60,7 @@ function renderClock() {
     const parts = [[d, "d"], [pad2(h), "h"], [pad2(m), "m"]];
     const nodes = [];
     for (const [v, u] of parts) { if (u === "d" && !d) continue; nodes.push(document.createTextNode(String(v)), el("span", u, "u")); }
-    const sec = el("span", pad2(s), `sec${REDUCED ? "" : " tick"}`);
+    const sec = el("span", pad2(s), `sec${calm() ? "" : " tick"}`);
     nodes.push(sec, el("span", "s", "u"));
     clock.replaceChildren(...nodes);
   }
@@ -108,7 +108,7 @@ function renderHero(b) {
   const s = b.summary;
   const price = $("#hlPrice");
   animateTo(price, s.hl, (v) => `$${fmt(v)}`);
-  if (lastHl !== null && s.hl !== lastHl && !REDUCED) {
+  if (lastHl !== null && s.hl !== lastHl && !calm()) {
     price.classList.remove("up", "down"); void price.offsetWidth;
     price.classList.add(s.hl > lastHl ? "up" : "down");
     FX.burstAt(price, { colors: s.hl > lastHl ? FX.palette().bull : FX.palette().bear, count: 70, speed: 380 }, 0.55, 0.5);
@@ -119,7 +119,7 @@ function renderHero(b) {
   $("#spread").textContent = signed(s.markDifference);
   $("#hlAge").textContent = `${fmt(s.priceAgeSeconds, 0)} s old at sweep`;
   const sweepNo = $("#sweepNo");
-  if (sweepNo.textContent !== String(s.sweep)) { sweepNo.textContent = String(s.sweep); if (lastSweep !== null && !REDUCED) { sweepNo.classList.remove("bump"); void sweepNo.offsetWidth; sweepNo.classList.add("bump"); FX.burstAt($(".ring-box"), { colors: FX.palette().gold, count: 110, speed: 520, life: 1.3 }); } }
+  if (sweepNo.textContent !== String(s.sweep)) { sweepNo.textContent = String(s.sweep); if (lastSweep !== null && !calm()) { sweepNo.classList.remove("bump"); void sweepNo.offsetWidth; sweepNo.classList.add("bump"); FX.burstAt($(".ring-box"), { colors: FX.palette().gold, count: 110, speed: 520, life: 1.3 }); } }
   animateTo($("#ownersChip"), s.owners, compact);
   const t = b.trend;
   if (t.length >= 2) {
@@ -208,7 +208,7 @@ function renderTable(b) {
   const body = el("tbody");
   b.clusters.forEach((cluster, index) => {
     const tr = el("tr", undefined, `row${cluster.start <= 3 ? " top3" : ""}`);
-    tr.style.animationDelay = REDUCED ? "0s" : `${Math.min(index, 12) * 45}ms`;
+    tr.style.animationDelay = calm() ? "0s" : `${Math.min(index, 12) * 45}ms`;
     const span = cluster.size > 1 || cluster.openEnded ? `${cluster.start}–${cluster.end}${cluster.openEnded ? "+" : ""}` : String(cluster.start);
     tr.append(el("td", span, "rank"));
     const moves = [...new Set(cluster.rows.map((r) => r.movement))];
@@ -234,7 +234,7 @@ function renderTable(b) {
   });
   table.append(head, body);
   $("#tableMount").replaceChildren(table);
-  if (FX.enabled) {
+  if (FX.isOn()) {
     const movers = [...table.querySelectorAll("td.move span")].filter((n) => /mv-(up|down|new)/.test(n.className)).slice(0, 12);
     movers.forEach((n, i) => setTimeout(() => {
       const c = n.classList.contains("mv-up") ? FX.palette().bull : n.classList.contains("mv-down") ? FX.palette().bear : FX.palette().hl;
@@ -280,7 +280,7 @@ const niceTicks = (min, max, count) => {
 };
 
 let chartRows = [];
-let firstDraw = !REDUCED;
+let firstDraw = !calm();
 let cometRaf = 0;
 function renderChart(rows) {
   chartRows = rows;
@@ -401,7 +401,7 @@ function renderChart(rows) {
   const wasFirst = firstDraw;
   if (firstDraw) { paths.forEach((p) => p.style.setProperty("--len", Math.ceil(p.getTotalLength()))); firstDraw = false; }
   cancelAnimationFrame(cometRaf);
-  if (FX.enabled) {
+  if (FX.isOn()) {
     const hlPath = paths[1], total = hlPath.getTotalLength(), t0 = performance.now() + (wasFirst ? 1600 : 0);
     const run = (now) => {
       const t = ((now - t0) / 7000) % 1;
@@ -527,21 +527,51 @@ $("#lookupForm").addEventListener("submit", async (event) => {
   } catch (error) { out.textContent = error.message; }
 });
 
+// effects and theme switches
+function syncToggles() {
+  const on = !calm();
+  const fxBtn = $("#fxToggle");
+  fxBtn.setAttribute("aria-pressed", String(on)); fxBtn.querySelector("span").textContent = on ? "Effects on" : "Effects off";
+  const dark = document.documentElement.dataset.theme !== "light";
+  const th = $("#themeToggle");
+  th.setAttribute("aria-pressed", String(dark)); th.querySelector("span").textContent = dark ? "Dark" : "Light";
+  $("#fxHint").hidden = on || document.documentElement.dataset.os !== "reduce";
+}
+function setEffects(on) {
+  document.documentElement.classList.toggle("calm", !on);
+  try { localStorage.setItem("fx", on ? "on" : "off"); } catch {}
+  syncToggles();
+  document.querySelectorAll(".reveal").forEach((n) => n.classList.add("in"));
+  if (on) { firstDraw = true; if (chartRows.length) renderChart(chartRows); setTimeout(() => FX.celebrate(), 150); }
+  else if (chartRows.length) renderChart(chartRows);
+}
+$("#fxToggle").addEventListener("click", () => setEffects(calm()));
+$("#fxEnable").addEventListener("click", () => setEffects(true));
+$("#themeToggle").addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("theme", next); } catch {}
+  syncToggles();
+  if (chartRows.length) renderChart(chartRows);
+  if (board) renderBattle(board);
+});
+syncToggles();
+
 // celebrations
 $("#celebrate")?.addEventListener("click", (e) => { FX.celebrate(); FX.burstAt(e.currentTarget, { colors: FX.palette().gold, count: 60, speed: 300 }); });
 $(".pool")?.addEventListener("pointerenter", () => FX.coins($(".pool"), 30));
 let welcomed = false;
-function welcome() { if (welcomed || !FX.enabled) return; welcomed = true; setTimeout(() => FX.celebrate(), 700); }
-if ("IntersectionObserver" in window && FX.enabled) {
+function welcome() { if (welcomed || !FX.isOn()) return; welcomed = true; setTimeout(() => FX.celebrate(), 700); }
+if ("IntersectionObserver" in window && FX.isOn()) {
   const prizeIo = new IntersectionObserver((entries) => entries.forEach((e) => {
     if (e.isIntersecting) { prizeIo.disconnect(); setTimeout(() => { FX.confetti({ from: $("#podium"), count: 140 }); FX.coins($(".step.p1 .block"), 36); }, 900); }
   }), { threshold: 0.45 });
   prizeIo.observe($(".prize"));
 }
-setInterval(() => { if (!document.hidden && FX.enabled) FX.coins($(".pool"), 14); }, 15_000);
+setInterval(() => { if (!document.hidden && FX.isOn()) FX.coins($(".pool"), 14); }, 15_000);
 
 // reveal-on-scroll
-const io = "IntersectionObserver" in window && !REDUCED ? new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 }) : null;
+const io = "IntersectionObserver" in window && !calm() ? new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 }) : null;
 document.querySelectorAll(".reveal").forEach((n) => (io ? io.observe(n) : n.classList.add("in")));
 
 buildSweepTicks();

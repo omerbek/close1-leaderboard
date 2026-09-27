@@ -3,7 +3,9 @@
 // particles are alive, pauses with the tab, caps the particle count, and does nothing at
 // all under prefers-reduced-motion.
 
-const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// "calm" is set on <html> when effects are off: by default when the OS asks for reduced
+// motion, and whenever the visitor switches effects off. The visitor can override either way.
+export const calm = () => document.documentElement.classList.contains("calm");
 const MAX = 900;
 const TAU = Math.PI * 2;
 
@@ -21,7 +23,8 @@ export const palette = () => ({
 });
 
 function ensure() {
-  if (canvas || REDUCED) return !REDUCED;
+  if (calm()) { particles.length = 0; return false; }
+  if (canvas) return true;
   canvas = document.createElement("canvas");
   canvas.className = "fx-canvas";
   canvas.setAttribute("aria-hidden", "true");
@@ -157,4 +160,4 @@ export function celebrate() {
   setTimeout(() => confetti({ count: 140 }), 500);
 }
 
-export const enabled = !REDUCED;
+export function isOn() { return !calm(); }
