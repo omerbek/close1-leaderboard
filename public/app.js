@@ -1,4 +1,5 @@
 // Close Call Arena — client. Every upstream string reaches the DOM through textContent.
+import * as FX from "./fx.js";
 
 const $ = (s) => document.querySelector(s);
 const el = (tag, text, className) => {
@@ -20,6 +21,8 @@ const pad2 = (n) => String(n).padStart(2, "0");
 let board = null;
 let lastSweep = null;
 let lastHl = null;
+let lastShare = null;
+let lastLeader = null;
 
 // ---------------------------------------------------------------- number animation
 
@@ -95,7 +98,7 @@ function spark(mount, values, color) {
   const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none" });
   root.append(svg("path", { d: `${d}L${W},${H}L0,${H}Z`, class: "a", fill: color }), svg("path", { d, class: "l", stroke: color, "vector-effect": "non-scaling-stroke" }));
   const [lx, ly] = pts.at(-1);
-  root.append(svg("circle", { cx: lx, cy: ly, r: 2.5, fill: color }));
+  root.append(svg("circle", { cx: lx, cy: ly, r: 2.5, fill: color }), svg("circle", { cx: lx, cy: ly, r: 2.5, fill: "none", stroke: color, class: "pulse-dot" }));
   mount.replaceChildren(root);
 }
 
@@ -108,6 +111,7 @@ function renderHero(b) {
   if (lastHl !== null && s.hl !== lastHl && !REDUCED) {
     price.classList.remove("up", "down"); void price.offsetWidth;
     price.classList.add(s.hl > lastHl ? "up" : "down");
+    FX.burstAt(price, { colors: s.hl > lastHl ? FX.palette().bull : FX.palette().bear, count: 70, speed: 380 }, 0.55, 0.5);
     setTimeout(() => price.classList.remove("up", "down"), 1800);
   }
   lastHl = s.hl;
@@ -115,7 +119,7 @@ function renderHero(b) {
   $("#spread").textContent = signed(s.markDifference);
   $("#hlAge").textContent = `${fmt(s.priceAgeSeconds, 0)} s old at sweep`;
   const sweepNo = $("#sweepNo");
-  if (sweepNo.textContent !== String(s.sweep)) { sweepNo.textContent = String(s.sweep); if (lastSweep !== null && !REDUCED) { sweepNo.classList.remove("bump"); void sweepNo.offsetWidth; sweepNo.classList.add("bump"); } }
+  if (sweepNo.textContent !== String(s.sweep)) { sweepNo.textContent = String(s.sweep); if (lastSweep !== null && !REDUCED) { sweepNo.classList.remove("bump"); void sweepNo.offsetWidth; sweepNo.classList.add("bump"); FX.burstAt($(".ring-box"), { colors: FX.palette().gold, count: 110, speed: 520, life: 1.3 }); } }
   animateTo($("#ownersChip"), s.owners, compact);
   const t = b.trend;
   if (t.length >= 2) {
@@ -130,6 +134,8 @@ function renderBattle(b) {
   $("#tugBull").style.flexGrow = String(bullShare);
   $("#tugBear").style.flexGrow = String(1 - bullShare);
   $("#tugKnot").style.left = `${bullShare * 100}%`;
+  if (lastShare !== null && Math.abs(lastShare - bullShare) > 1e-6) setTimeout(() => FX.burstAt($("#tugKnot"), { colors: bullShare > lastShare ? FX.palette().bull : FX.palette().bear, count: 50, speed: 340 }), 1200);
+  lastShare = bullShare;
   animateTo($("#bullCount"), s.longs, int);
   animateTo($("#bearCount"), s.shorts, int);
   $("#bullPct").textContent = `${fmt(bullShare * 100, 1)}%`;
@@ -161,6 +167,9 @@ function renderPodium(b) {
     return step;
   });
   $("#podium").replaceChildren(...steps);
+  const leader = places[0] ? places[0].rows.map((r) => r.did).join(",") : null;
+  if (lastLeader !== null && leader !== lastLeader) { FX.celebrate(); setTimeout(() => FX.coins($(".step.p1 .block"), 40), 400); }
+  lastLeader = leader;
 }
 
 // ---------------------------------------------------------------- standings
@@ -225,6 +234,13 @@ function renderTable(b) {
   });
   table.append(head, body);
   $("#tableMount").replaceChildren(table);
+  if (FX.enabled) {
+    const movers = [...table.querySelectorAll("td.move span")].filter((n) => /mv-(up|down|new)/.test(n.className)).slice(0, 12);
+    movers.forEach((n, i) => setTimeout(() => {
+      const c = n.classList.contains("mv-up") ? FX.palette().bull : n.classList.contains("mv-down") ? FX.palette().bear : FX.palette().hl;
+      FX.burstAt(n, { colors: c, count: 26, speed: 220, life: 0.8, ring: false });
+    }, 500 + i * 90));
+  }
   const groups = b.clusters.filter((c) => c.size > 1);
   $("#tieNote").textContent = groups.length ? `${groups.length} tie group${groups.length > 1 ? "s" : ""} — identical scores usually mean keys that entered the same side in the same sweep.` : "";
   $("#standingsMeta").textContent = `sweep ${int(b.summary.sweep)}${b.previousSweep ? ` · vs ${int(b.previousSweep)}` : ""}`;
@@ -265,6 +281,7 @@ const niceTicks = (min, max, count) => {
 
 let chartRows = [];
 let firstDraw = !REDUCED;
+let cometRaf = 0;
 function renderChart(rows) {
   chartRows = rows;
   const mount = $("#chart");
@@ -301,14 +318,27 @@ function renderChart(rows) {
   root.append(svgText({ x: padL, y: B.top - 12, class: "panel-title" }, "Leading published score (POLF, at mark)"));
 
   const line = (values, y) => values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const defs = svg("defs");
+  const glow = svg("filter", { id: "glow", x: "-20%", y: "-50%", width: "140%", height: "200%" });
+  glow.append(svg("feGaussianBlur", { stdDeviation: 3.2, result: "b" }));
+  const merge = svg("feMerge"); merge.append(svg("feMergeNode", { in: "b" }), svg("feMergeNode", { in: "SourceGraphic" })); glow.append(merge);
+  const grad = svg("linearGradient", { id: "hlFill", x1: 0, y1: 0, x2: 0, y2: 1 });
+  grad.append(svg("stop", { offset: "0%", "stop-color": "var(--s-hl)", "stop-opacity": 0.35 }), svg("stop", { offset: "100%", "stop-color": "var(--s-hl)", "stop-opacity": 0 }));
+  defs.append(glow, grad); root.append(defs);
+  const hlLine = hl.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${yA(v).toFixed(1)}`).join("");
+  root.append(svg("path", { d: `${hlLine}L${x(hl.length - 1)},${A.top + A.h}L${x(0)},${A.top + A.h}Z`, fill: "url(#hlFill)", class: "hl-area" }));
   const drawn = (d, cls) => { const p = svg("path", { d, class: firstDraw ? `${cls} draw` : cls }); return p; };
   const paths = [drawn(line(mark, yA), "s-mark"), drawn(line(hl, yA), "s-hl"), drawn(line(scores, yB), "s-top")];
+  paths[1].setAttribute("filter", "url(#glow)");
+  paths[2].setAttribute("filter", "url(#glow)");
   root.append(...paths);
 
+  const spikeAt = [];
   let clipped = 0;
   mark.forEach((v, i) => {
     if (v > hi || v < lo) {
       clipped += 1;
+      spikeAt.push(i);
       const up = v > hi, cy = up ? A.top + 1 : A.top + A.h - 1, cx = x(i);
       root.append(svg("path", { d: up ? `M${cx - 4},${cy + 7}L${cx},${cy}L${cx + 4},${cy + 7}Z` : `M${cx - 4},${cy - 7}L${cx},${cy}L${cx + 4},${cy - 7}Z`, class: "clip" }));
     }
@@ -321,6 +351,13 @@ function renderChart(rows) {
   endLabel(`HL ${fmt(hl.at(-1))}`, yHl + apart[0], "l-hl");
   endLabel(`mark ${fmt(mark.at(-1))}`, yMk + apart[1], "l-mark");
   endLabel(fmt(scores.at(-1)), yB(scores.at(-1)), "l-top");
+
+  // Live pulse at the newest HL point and a comet that keeps running along the HL line.
+  const lastX = x(hl.length - 1), lastY = yA(hl.at(-1));
+  const pulse = svg("circle", { cx: lastX, cy: lastY, r: 5, class: "chart-pulse" });
+  const head = svg("circle", { cx: lastX, cy: lastY, r: 4.5, class: "chart-head" });
+  const comet = [0, 1, 2, 3, 4].map((k) => svg("circle", { r: 4 - k * 0.6, class: "comet", opacity: 1 - k * 0.18 }));
+  root.append(pulse, head, ...comet);
 
   // Hover / keyboard crosshair.
   const cross = svg("line", { y1: A.top, y2: B.top + B.h, class: "cross", visibility: "hidden" });
@@ -361,7 +398,29 @@ function renderChart(rows) {
     const item = el("span", undefined, "key"); item.append(el("i", undefined, c), el("span", t)); legend.append(item);
   });
   mount.replaceChildren(root, tip, legend);
+  const wasFirst = firstDraw;
   if (firstDraw) { paths.forEach((p) => p.style.setProperty("--len", Math.ceil(p.getTotalLength()))); firstDraw = false; }
+  cancelAnimationFrame(cometRaf);
+  if (FX.enabled) {
+    const hlPath = paths[1], total = hlPath.getTotalLength(), t0 = performance.now() + (wasFirst ? 1600 : 0);
+    const run = (now) => {
+      const t = ((now - t0) / 7000) % 1;
+      if (now >= t0) comet.forEach((c, k) => { const pt = hlPath.getPointAtLength(Math.max(0, t - k * 0.006) * total); c.setAttribute("cx", pt.x); c.setAttribute("cy", pt.y); });
+      cometRaf = requestAnimationFrame(run);
+    };
+    cometRaf = requestAnimationFrame(run);
+    // Spikes the axis had to clip go off like fireworks once the lines have drawn in.
+    const box = () => root.getBoundingClientRect();
+    const sx = () => box().width / W;
+    setTimeout(() => {
+      spikeAt.slice(-8).forEach((i, k) => setTimeout(() => {
+        const r = box(), up = mark[i] > hi;
+        FX.burst(r.left + x(i) * sx(), r.top + (up ? A.top : A.top + A.h) * sx(), { colors: FX.palette().mark, count: 34, speed: 260, life: 0.9 });
+      }, k * 140));
+      const r = box();
+      FX.burst(r.left + lastX * sx(), r.top + lastY * sx(), { colors: FX.palette().hl, count: 60, speed: 320 });
+    }, wasFirst ? 1700 : 200);
+  }
   $("#chartMeta").textContent = `${rows.length} sweeps · ${int(rows[0].n)}–${int(rows.at(-1).n)}${clipped ? ` · ${clipped} mark spike${clipped > 1 ? "s" : ""} beyond the axis (▲▼)` : ""}`;
 
   // Table view of the most recent points.
@@ -420,6 +479,7 @@ async function refresh() {
     const newSweep = b.summary.sweep !== lastSweep;
     board = b;
     renderHero(b); renderBattle(b); renderPodium(b); renderHealth(b); renderVerification(b); renderClock();
+    welcome();
     if (newSweep) {
       renderTable(b); renderTape(b);
       const h = await fetch("/api/history").then((r) => (r.ok ? r.json() : { history: [] })).catch(() => ({ history: [] }));
@@ -466,6 +526,19 @@ $("#lookupForm").addEventListener("submit", async (event) => {
     out.replaceChildren(el("p", `${data.history.length} retained sweep${data.history.length > 1 ? "s" : ""} list this key.`), table);
   } catch (error) { out.textContent = error.message; }
 });
+
+// celebrations
+$("#celebrate")?.addEventListener("click", (e) => { FX.celebrate(); FX.burstAt(e.currentTarget, { colors: FX.palette().gold, count: 60, speed: 300 }); });
+$(".pool")?.addEventListener("pointerenter", () => FX.coins($(".pool"), 30));
+let welcomed = false;
+function welcome() { if (welcomed || !FX.enabled) return; welcomed = true; setTimeout(() => FX.celebrate(), 700); }
+if ("IntersectionObserver" in window && FX.enabled) {
+  const prizeIo = new IntersectionObserver((entries) => entries.forEach((e) => {
+    if (e.isIntersecting) { prizeIo.disconnect(); setTimeout(() => { FX.confetti({ from: $("#podium"), count: 140 }); FX.coins($(".step.p1 .block"), 36); }, 900); }
+  }), { threshold: 0.45 });
+  prizeIo.observe($(".prize"));
+}
+setInterval(() => { if (!document.hidden && FX.enabled) FX.coins($(".pool"), 14); }, 15_000);
 
 // reveal-on-scroll
 const io = "IntersectionObserver" in window && !REDUCED ? new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 }) : null;

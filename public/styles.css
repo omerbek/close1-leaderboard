@@ -76,7 +76,7 @@ h2 { font-size:clamp(1.5rem,3vw,2.2rem); margin:0; line-height:1.1; }
 .h-small { display:block; font-size:clamp(1rem,2vw,1.25rem); font-weight:500; color:var(--ink-2); letter-spacing:0; }
 .clock { display:block; font:700 clamp(2.6rem,8.4vw,6.2rem)/1 var(--mono); letter-spacing:-.04em; background:linear-gradient(180deg,var(--ink) 30%,color-mix(in srgb,var(--ink) 55%,var(--flop))); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .clock .u { font-size:.38em; color:var(--muted); -webkit-text-fill-color:var(--muted); margin:0 .18em 0 .04em; letter-spacing:0; }
-.clock .sec { display:inline-block; min-width:1.2em; }
+.clock .sec { display:inline-block; min-width:1.2em; color:var(--ink); -webkit-text-fill-color:var(--ink); }
 .clock .sec.tick { animation:secTick .35s ease-out; }
 @keyframes secTick { from { transform:translateY(-8%); opacity:.4; } }
 .hero-sub { color:var(--ink-2); max-width:620px; margin:0 0 1.2rem; }
@@ -267,7 +267,35 @@ footer p { margin:.3rem 0; }
   pre { font-size:.7rem; }
 }
 
+/* ---------- effects ---------- */
+.fx-canvas { position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:40; }
+.chip.celebrate { cursor:pointer; font-weight:700; color:var(--ink); border-color:color-mix(in srgb,var(--flop) 55%,transparent); background:linear-gradient(120deg,color-mix(in srgb,var(--flop) 22%,transparent),color-mix(in srgb,var(--bear) 18%,transparent),color-mix(in srgb,var(--bull) 18%,transparent)); background-size:200% 100%; animation:party 4s linear infinite; }
+.chip.celebrate:hover { transform:translateY(-1px) scale(1.03); box-shadow:0 0 24px color-mix(in srgb,var(--flop) 40%,transparent); }
+@keyframes party { to { background-position:-200% 0; } }
+.pool { cursor:default; }
+.pool .shine { filter:drop-shadow(0 0 18px color-mix(in srgb,var(--flop) 45%,transparent)); }
+.step.p1 .block { position:relative; overflow:hidden; box-shadow:0 0 40px color-mix(in srgb,var(--flop) 35%,transparent); }
+.step.p1 .block::after { content:""; position:absolute; inset:0; background:linear-gradient(115deg,transparent 30%,rgb(255 255 255 / 45%) 45%,transparent 60%); transform:translateX(-120%); animation:sweepShine 3.2s ease-in-out infinite 1.2s; }
+@keyframes sweepShine { 60%, 100% { transform:translateX(120%); } }
+.step.p1::before { content:"♛"; font-size:1.6rem; color:var(--flop); text-shadow:0 0 16px var(--flop); animation:float 2.4s ease-in-out infinite; }
+@keyframes float { 50% { transform:translateY(-6px); } }
+.knot { animation:knotGlow 1.8s ease-in-out infinite; }
+@keyframes knotGlow { 50% { box-shadow:0 0 26px var(--flop), 0 0 6px #fff; } }
+.chart .hl-area { opacity:0; animation:fadeIn 1.2s ease-out .8s forwards; }
+@keyframes fadeIn { to { opacity:1; } }
+.chart .chart-pulse { fill:none; stroke:var(--s-hl); stroke-width:2; transform-box:fill-box; transform-origin:center; animation:ping 1.8s ease-out infinite; }
+@keyframes ping { from { transform:scale(1); opacity:.9; } to { transform:scale(4); opacity:0; } }
+.chart .chart-head { fill:var(--s-hl); stroke:var(--surface-solid); stroke-width:2; filter:url(#glow); }
+.chart .comet { fill:#fff; filter:url(#glow); }
+.chart .clip { transform-box:fill-box; transform-origin:center; animation:pop .5s cubic-bezier(.2,1.8,.4,1) both 1.5s; }
+@keyframes pop { from { transform:scale(0); } }
+.chart .dot { filter:url(#glow); }
+.spark .pulse-dot { stroke-width:1.5; transform-box:fill-box; transform-origin:center; animation:ping 2s ease-out infinite; }
+.table-mount tr.top3 td.rank { text-shadow:0 0 14px color-mix(in srgb,var(--flop) 70%,transparent); }
+.mv-up, .mv-down, .mv-new { display:inline-block; animation:pop .5s cubic-bezier(.2,1.8,.4,1) both .4s; }
+
 @media (prefers-reduced-motion: reduce) {
+  .fx-canvas, .chart .comet, .chart .chart-pulse, .chip.celebrate { display:none; }
   *, *::before, *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
   .reveal { opacity:1; transform:none; }
 }
