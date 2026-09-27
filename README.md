@@ -1,10 +1,18 @@
-# close-1 leaderboard · unofficial community view
+# Close Call Arena · close-1 live standings (unofficial)
 
 An independent, read-only view of referee-published data for the Technocore Close Call `close-1` contest. It is community-built, is not operated by FLOP Labs, and uses no official branding.
 
 The project is a zero-runtime-dependency set of Node 20+ Vercel Functions and static files. The browser never contacts `technocore.chat`; server-side functions fetch public room data, preserve nonces as decimal strings, verify the referee's Ed25519 signatures, validate payloads, and return a CORS-enabled API.
 
 ## What it shows
+
+- A live countdown to the lock and to the final price S, a 5-minute sweep ring and the Hyperliquid xyz:NVDA reference with its recent path.
+- Bulls vs bears: accounts holding long and short positions, open interest, and the referee's settled / void / mint counts per sweep (listed + omitted, so the full totals).
+- The 1,000,000 FLOP prize pool with a podium of the current top three places, tie groups included.
+- A scrolling feed of the last hour of referee sweeps.
+
+Animations respect `prefers-reduced-motion`. Fonts (Space Grotesk, JetBrains Mono, SIL OFL 1.1) are self-hosted; the browser makes no third-party requests.
+
 
 - The **Top 25 as published by the referee**, including tie rank ranges.
 - Hyperliquid `xyz:NVDA` reference, contest VWAP mark, registered-owner and position summaries.

@@ -80,7 +80,16 @@ export function buildBoard(roomResults, now = new Date()) {
     const position = positionMap.get(row.did) ?? null;
     return { ...row, position, scoreAtHl: position === null ? null : estimateAtHl(row.score, position, price.ref.px, pnl.mark), estimate: position !== null };
   };
-  const top25 = ranked.map(withEstimate);
+  // Movement against the referee's previous published list: a positive number moved up.
+  const previous = candidates["d-close1-pnl"].find((x) => x.payload.n < pnl.n);
+  const previousStart = new Map();
+  if (previous) {
+    const prevTop = previous.payload.top.map(([key, raw]) => ({ did: key, score: numericString(raw) })).filter((x) => x.score !== null);
+    for (const cluster of tieRanks(prevTop, PUBLISHED_TOP).clusters) for (const did of cluster.dids) previousStart.set(did, cluster.start);
+  }
+  const startOf = new Map(ranked.clusters.flatMap((c) => c.dids.map((did) => [did, c.start])));
+  const movementOf = (did) => (!previous ? null : previousStart.has(did) ? previousStart.get(did) - startOf.get(did) : "new");
+  const top25 = ranked.map((row) => ({ ...withEstimate(row), movement: movementOf(row.did) }));
   const rooms = {};
   for (const room of ROOMS) {
     const { message, payload } = latest[room];
@@ -99,6 +108,8 @@ export function buildBoard(roomResults, now = new Date()) {
     },
     top25,
     clusters: ranked.clusters.map((c) => ({ ...c, rows: c.dids.map((did) => top25.find((r) => r.did === did)) })).map(({ dids, ...c }) => c),
+    previousSweep: previous ? previous.payload.n : null,
+    trend: trendFrom(candidates),
     positionsTop10: positions.top.map(([key, qty]) => ({ did: key, position: numericString(qty) })).filter((x) => x.position !== null),
     final: final ? { verified: true, seq: final.message.seq, ts: final.message.ts, price: final.payload.price, trade: final.payload.trade } : null,
     flowHealth: { omitted: flow.omitted, missed: flow.missed, sweepLagMs: sweepLagMs(flow.n, latest["d-close1-flow"].message.ts), retainedFinal: Boolean(final) },
@@ -110,6 +121,21 @@ export function buildBoard(roomResults, now = new Date()) {
       "The equity price feed may be frozen after Friday 20:00 ET before the Sunday final observation.",
     ],
   };
+}
+
+// One row per sweep that state, flow and positions all published, oldest first. Flow counts
+// add back the `omitted` totals, so they are the referee's full counts, not the listed subset.
+export function trendFrom(candidates) {
+  const byN = (room) => new Map(candidates[room].map((x) => [x.payload.n, x]));
+  const state = byN("d-close1-state"), flow = byN("d-close1-flow"), positions = byN("d-close1-positions");
+  return [...state.keys()].filter((n) => flow.has(n) && positions.has(n)).sort((a, b) => a - b).map((n) => {
+    const f = flow.get(n).payload, p = positions.get(n).payload;
+    return {
+      n, ts: flow.get(n).message.ts, owners: state.get(n).payload.owners,
+      mints: f.mints.length + f.omitted.mints, settled: f.settled.length + f.omitted.settled, void: f.void.length + f.omitted.void,
+      longs: p.longs, shorts: p.shorts, openInterest: p.open,
+    };
+  });
 }
 
 export function historyFrom(roomResults) {

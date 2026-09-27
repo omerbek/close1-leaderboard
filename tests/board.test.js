@@ -39,3 +39,15 @@ test("rooms are aligned on the newest sweep all five have published", () => {
   assert.equal(chosen.price.payload.n, 531); assert.equal(chosen.pnl.payload.n, 531);
   assert.equal(alignSweeps({ a: c(9), b: c(7) }).aligned, false);
 });
+
+test("board reports rank movement against the previous published list and a verified trend", async () => {
+  const { fixtureResults } = await import("./helpers.js");
+  const { buildBoard } = await import("../api/_lib/board.js");
+  const { ROOMS } = await import("../api/_lib/constants.js");
+  const board = buildBoard(await fixtureResults(ROOMS), new Date("2026-09-27T10:00:00Z"));
+  assert.ok(board.previousSweep === null || board.previousSweep < board.summary.sweep);
+  for (const row of board.top25) assert.ok(row.movement === null || row.movement === "new" || Number.isInteger(row.movement));
+  assert.ok(board.trend.length >= 1);
+  for (const t of board.trend) { assert.ok(t.settled >= 0 && t.mints >= 0 && t.owners > 0); }
+  assert.deepEqual(board.trend.map((t) => t.n), [...board.trend.map((t) => t.n)].sort((a, b) => a - b));
+});

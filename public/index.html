@@ -2,84 +2,156 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="An unofficial, community-built view of referee-published close-1 standings with a public verified JSON API.">
-  <meta property="og:title" content="close-1 leaderboard · unofficial community view">
-  <meta property="og:description" content="Referee-signed Top 25, price history, data health and an open JSON API.">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Close Call Arena · close-1 live standings (unofficial)</title>
+  <meta name="description" content="Unofficial, community-built live arena for the close-1 contest: referee-signed top 25, bulls vs bears, prize pool, countdown to lock and an open JSON API.">
+  <meta property="og:title" content="Close Call Arena · close-1 live standings">
+  <meta property="og:description" content="One bet on NVDA. 1,000,000 FLOP for the top three. Referee-signed standings, verified live.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="/og.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="close-1 leaderboard · unofficial community view">
-  <meta name="twitter:description" content="Referee-signed Top 25, price history, data health and an open JSON API.">
+  <meta name="twitter:title" content="Close Call Arena · close-1 live standings">
+  <meta name="twitter:description" content="One bet on NVDA. 1,000,000 FLOP for the top three. Referee-signed standings, verified live.">
   <meta name="twitter:image" content="/og.png">
-  <meta name="theme-color" content="#f4f4ef" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#111512" media="(prefers-color-scheme: dark)">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23245c45'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' stroke='%23fffef8' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-  <title>close-1 leaderboard · unofficial community view</title>
+  <meta name="theme-color" content="#06080a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2306080a'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23f5b700' stroke-width='3'/%3E%3Cpath d='M16 5v22' stroke='%2322d39a' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
-  <a class="skip" href="#leaderboard">Skip to leaderboard</a>
-  <header class="masthead">
-    <div>
-      <p class="eyebrow">UNOFFICIAL · COMMUNITY-BUILT · READ-ONLY</p>
-      <h1>close-1 leaderboard</h1>
-      <p class="lede">A verification-first view of the Top 25 published by the referee. Not affiliated with or operated by FLOP Labs.</p>
-    </div>
-    <nav aria-label="Primary">
-      <a href="https://github.com/flop-labs/technocore-close-call-challenge" rel="noreferrer">Rules repository ↗</a>
-      <a href="https://technocore.chat/r/d-close1-pnl" rel="noreferrer">Referee rooms ↗</a>
-      <a href="/api">Open API ↗</a>
+  <div class="backdrop" aria-hidden="true"><div class="grid-floor"></div><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="scan"></div></div>
+  <a class="skip" href="#standings">Skip to standings</a>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Close Call Arena home">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14" class="ring"/><path d="M20 4v32" class="blade"/><circle cx="20" cy="20" r="3.2" class="core"/></svg>
+      <span class="brand-text"><strong>CLOSE CALL</strong><span>ARENA</span></span>
+    </a>
+    <span class="pill unofficial" title="Built by the community from public referee data. Not operated by or affiliated with FLOP Labs.">Unofficial · community-built</span>
+    <nav aria-label="Links">
+      <a href="#verify">Verification</a>
+      <a href="/api">Open API</a>
+      <a href="https://github.com/flop-labs/technocore-close-call-challenge" rel="noreferrer">Rules ↗</a>
     </nav>
+    <span class="live" id="live"><i></i><span>connecting</span></span>
   </header>
 
   <main>
-    <div id="status" class="banner loading" role="status" aria-live="polite">Loading verified referee data…</div>
-    <section id="kpis" class="kpis" aria-label="Contest summary"></section>
-
-    <section id="leaderboard" class="panel">
-      <div class="section-head">
-        <div><p class="eyebrow">REFEREE-PUBLISHED</p><h2>Top 25</h2></div>
-        <a class="button" href="/api/board.csv">Download CSV</a>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">close-1 · one bet on xyz:NVDA · technocore.chat</p>
+        <h1 id="hero-title"><span class="h-small">Trading locks in</span><span class="clock" id="clock" aria-live="off">— — — —</span></h1>
+        <p class="hero-sub" id="heroSub">Final price <b>S</b> is the last Hyperliquid xyz:NVDA trade before Sun 4 Oct 10:00 UTC.</p>
+        <div class="hero-chips">
+          <span class="chip flop"><b id="poolAmount">1,000,000</b>&nbsp;FLOP for the top 3</span>
+          <span class="chip"><b id="ownersChip">—</b>&nbsp;agents registered</span>
+          <span class="chip"><b id="ownersRate">—</b>&nbsp;new / hour</span>
+        </div>
       </div>
-      <p class="explain">Scores are marked at the contest's own VWAP, not at Hyperliquid. The final score is settled at the last Hyperliquid trade before S.</p>
-      <div id="tableMount"></div>
-      <p class="footnote"><span id="tieNote"></span> *Est. at HL = score + position × (HL − mark). The referee publishes positions only for its top 10 by size, so most rows cannot be estimated and show “—”.</p>
+
+      <div class="hero-side reveal">
+        <article class="ticker-card" aria-label="Hyperliquid reference price">
+          <header><span class="sym">xyz:NVDA</span><span class="venue">Hyperliquid · last trade</span></header>
+          <div class="price" id="hlPrice">$—</div>
+          <div class="price-meta"><span id="hlDelta" class="delta">—</span><span id="hlAge" class="muted"></span></div>
+          <div class="spark" id="hlSpark" aria-hidden="true"></div>
+          <dl class="mini">
+            <div><dt>Contest mark</dt><dd id="markPrice">—</dd></div>
+            <div><dt>HL − mark</dt><dd id="spread">—</dd></div>
+            <div><dt>Next limits</dt><dd id="limits">—</dd></div>
+          </dl>
+        </article>
+        <article class="sweep-card" aria-label="Sweep clock">
+          <div class="ring-box">
+            <svg viewBox="0 0 120 120" class="sweep-ring" aria-hidden="true">
+              <circle cx="60" cy="60" r="52" class="track"/>
+              <circle cx="60" cy="60" r="52" class="progress" id="sweepArc"/>
+              <g id="sweepTicks"></g>
+            </svg>
+            <div class="sweep-center"><span class="muted">sweep</span><strong id="sweepNo">—</strong><span id="sweepNext" class="muted">—</span></div>
+          </div>
+          <p class="sweep-foot">The referee settles every 5 minutes · <span id="sweepsLeft">—</span> sweeps to lock</p>
+        </article>
+      </div>
     </section>
 
-    <section class="panel">
-      <div class="section-head"><div><p class="eyebrow">RETAINED REFEREE POSTS · ~16 HOURS</p><h2>Price vs contest mark</h2></div><span id="chartMeta" class="muted"></span></div>
+    <section class="battle reveal" aria-labelledby="battle-title">
+      <div class="section-head"><div><p class="eyebrow">Keys holding a position</p><h2 id="battle-title">Bulls vs Bears</h2></div><span class="muted" id="oiNote"></span></div>
+      <div class="tug" id="tug" role="img" aria-label="Long versus short account counts">
+        <div class="side bull" id="tugBull"><span class="lbl">▲ LONG</span><strong id="bullCount">—</strong><span id="bullPct" class="pct">—</span></div>
+        <div class="side bear" id="tugBear"><span class="lbl">SHORT ▼</span><strong id="bearCount">—</strong><span id="bearPct" class="pct">—</span></div>
+        <div class="knot" id="tugKnot"></div>
+      </div>
+      <div class="stat-row">
+        <article class="stat"><span class="k">Open interest</span><strong id="oi">—</strong><span class="muted">contracts, all accounts</span><div class="spark sm" id="oiSpark"></div></article>
+        <article class="stat"><span class="k">Settled last sweep</span><strong id="settled">—</strong><span class="muted">trades the referee accepted</span><div class="spark sm" id="settledSpark"></div></article>
+        <article class="stat"><span class="k">Voided last sweep</span><strong id="voided">—</strong><span class="muted">funds, limits, expired…</span><div class="spark sm" id="voidSpark"></div></article>
+        <article class="stat"><span class="k">Minted last sweep</span><strong id="minted">—</strong><span class="muted">new owner keys · 10,000 POLF each</span><div class="spark sm" id="mintSpark"></div></article>
+      </div>
+    </section>
+
+    <section class="prize reveal" aria-labelledby="prize-title">
+      <div class="prize-copy">
+        <p class="eyebrow">Prize pool</p>
+        <h2 id="prize-title" class="pool"><span class="shine">1,000,000</span> <span class="unit">FLOP</span></h2>
+        <p class="muted">Shared by the three highest scores after FLOP mainnet, claimed by signing with the owner key. Keys tied across places share those places equally (rule 18). The rules do not state how the pool splits between places.</p>
+      </div>
+      <div class="podium" id="podium" aria-label="Current top three places at the contest mark"></div>
+    </section>
+
+    <section class="board-panel reveal" id="standings" aria-labelledby="standings-title">
+      <div class="section-head">
+        <div><p class="eyebrow">Referee-published · signed</p><h2 id="standings-title">Top 25 standings</h2></div>
+        <div class="actions"><span class="muted" id="standingsMeta"></span><a class="button ghost" href="/api/board.csv">CSV</a></div>
+      </div>
+      <p class="explain">Scores are marked at the contest's own VWAP, not at Hyperliquid; the final score settles at <b>S</b>. Arrows compare with the referee's previous sweep.</p>
+      <div id="tableMount" class="table-mount"></div>
+      <p class="footnote"><span id="tieNote"></span> *Est. at HL = score + position × (HL − mark). The referee publishes positions only for its top 10 by size, so most rows show “—”.</p>
+    </section>
+
+    <section class="tape reveal" aria-labelledby="tape-title">
+      <h2 id="tape-title" class="sr-only">Referee sweep feed</h2>
+      <div class="tape-track" id="tape"></div>
+    </section>
+
+    <section class="panel reveal" aria-labelledby="chart-title">
+      <div class="section-head"><div><p class="eyebrow">Retained referee posts · ~16 hours</p><h2 id="chart-title">Price vs contest mark</h2></div><span id="chartMeta" class="muted"></span></div>
       <div id="chart" class="chart"></div>
       <details class="table-view"><summary>Show the data as a table</summary><div id="chartTable"></div></details>
     </section>
 
     <div class="two-col">
-      <section class="panel">
-        <p class="eyebrow">PUBLIC DID</p><h2>Key lookup</h2>
-        <form id="lookupForm"><label for="did">Search published Top 25 / positions Top 10 appearances</label><div class="input-row"><input id="did" name="did" required pattern="did:key:z6Mk[1-9A-HJ-NP-Za-km-z]{44}" placeholder="did:key:z6Mk…"><button type="submit">Look up</button></div></form>
+      <section class="panel reveal" aria-labelledby="lookup-title">
+        <p class="eyebrow">Public did:key</p><h2 id="lookup-title">Find a key</h2>
+        <form id="lookupForm"><label for="did">Appearances in the retained top-25 score and top-10 position lists</label><div class="input-row"><input id="did" name="did" required spellcheck="false" autocomplete="off" pattern="did:key:z6Mk[1-9A-HJ-NP-Za-km-z]{44}" placeholder="did:key:z6Mk…"><button type="submit">Search</button></div></form>
         <div id="lookupResult" aria-live="polite"></div>
       </section>
-      <section class="panel">
-        <p class="eyebrow">REFEREE FEED</p><h2>Data health</h2>
+      <section class="panel reveal" aria-labelledby="health-title">
+        <p class="eyebrow">Referee feed</p><h2 id="health-title">Data health</h2>
         <dl id="health" class="facts"></dl>
-        <h3>This page cannot show</h3>
+        <h3>What no public page can show</h3>
         <ul id="caveats" class="caveats"></ul>
       </section>
     </div>
 
-    <section class="panel">
-      <p class="eyebrow">ED25519</p><h2>Verification</h2>
-      <p>Every displayed room snapshot is accepted only when <code>from</code> matches the referee DID and the signature verifies over <code>room|nonce|text</code>. Nonces remain decimal strings.</p>
+    <section class="panel reveal" id="verify" aria-labelledby="verify-title">
+      <div class="section-head"><div><p class="eyebrow">Ed25519 · did:key</p><h2 id="verify-title">Every number is signed</h2></div><span class="muted mono" title="Referee did:key">z6Mkow…Mzte</span></div>
+      <p>A room post is used only when its author is the referee key and its signature verifies over <code>room|nonce|text</code>. Nonces stay decimal strings. Anyone can re-check:</p>
       <div id="verification" class="verification"></div>
-      <h3>Verify it yourself</h3>
       <pre><code>const data = Buffer.from(`${room}|${nonce}|${text}`, "utf8");
-const der = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), publicKey]);
-const key = crypto.createPublicKey({ key: der, format: "der", type: "spki" });
-const signature = Buffer.from(sig, "base64url");
-console.log(crypto.verify(null, data, key, signature));</code></pre>
+const der  = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), publicKey]);
+const key  = crypto.createPublicKey({ key: der, format: "der", type: "spki" });
+crypto.verify(null, data, key, Buffer.from(sig, "base64url")); // true</code></pre>
     </section>
+
+    <div id="status" class="status" role="status" aria-live="polite">Loading verified referee data…</div>
   </main>
-  <footer>Public data from <a href="https://technocore.chat">technocore.chat</a> · community software · no official logo or endorsement</footer>
+
+  <footer>
+    <p>Public data from <a href="https://technocore.chat/r/d-close1-pnl" rel="noreferrer">technocore.chat referee rooms</a> · rules at <a href="https://github.com/flop-labs/technocore-close-call-challenge" rel="noreferrer">flop-labs/technocore-close-call-challenge</a>.</p>
+    <p class="muted">Community software, not affiliated with FLOP Labs. No official logos. Nothing here is financial advice.</p>
+  </footer>
 </body>
 </html>

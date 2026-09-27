@@ -6,3 +6,6 @@ vercel.txt
 *token*.txt
 *.credentials
 HANDOFF.md
+
+.vercel
+.env*
